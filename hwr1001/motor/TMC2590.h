@@ -40,7 +40,18 @@
 #define   BIT_OT  1
 #define   BIT_SG  0
 
-#define   ReadDataBit(iStatu, iBit)   (  (iStatu) & (1 << (iBit)) )
+#define		SG_POS			0
+#define		SG_OT				1
+#define		SG_OTPW			2
+#define		SG_SHORTA		3
+#define		SG_SHORTB		4
+#define		SG_OLA			5
+#define		SG_OLB			6
+//#define   ReadDataBit(iStatu, iBit)   (  (iStatu) & (1 << (iBit)) )
+
+
+extern uint8_t  motor_step_value;
+extern uint8_t  TMC2590_error_status;
 
 /*需配置的寄存器结构，以位域分割*/
 
@@ -176,6 +187,13 @@ typedef union
   uint32_t iRead;
 }unReadStatus;
 
+typedef struct
+{
+	uint16_t StallGuard;
+	uint8_t  CoolStepScaling;
+	uint32_t iValue;
+	uint8_t  iStallOccurs;
+}StructStatus;
 
 #define SPI_TMC2590_CS_HIGH()   HAL_GPIO_WritePin (SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET)
 #define SPI_TMC2590_CS_LOW()    HAL_GPIO_WritePin (SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_RESET)
@@ -189,6 +207,8 @@ typedef union
 HAL_StatusTypeDef TMC2590_ReadSingleStatus(ReadSelect iSelect, uint32_t *iValue);
 HAL_StatusTypeDef TMC2590_SetReg (uint32_t iRegAddr, uint32_t iValue);
 bool TMC2590_SetMicroStep (uint16_t iValue, HAL_StatusTypeDef *iErrorCode);
-void TMC2590_Init (void);
+bool TMC2590_Init (void);
+HAL_StatusTypeDef SPI_TMC2590_SendByte (uint32_t iWriteData, uint32_t *iRecvData);
+void TMC2590_GetStatus(StructStatus *structStatus);
 
 #endif

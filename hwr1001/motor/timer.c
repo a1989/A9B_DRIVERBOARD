@@ -20,6 +20,25 @@ void TIM4_IT_Interrupt_Switch (uint8_t VALUE)
     }
 }
 
+void TIM3_IT_Interrupt_Switch (uint8_t VALUE)
+{
+    __HAL_TIM_CLEAR_IT (&htim3, TIM_IT_UPDATE);
+    if (VALUE == 1)
+    {
+        if (HAL_TIM_Base_Start_IT (&htim3) != HAL_OK)
+        {
+            Error_Handler();
+        }
+    }
+    else
+    {
+        if (HAL_TIM_Base_Stop_IT (&htim3) != HAL_OK)
+        {
+            Error_Handler();
+        }
+    }
+}
+
 void TIM1_IT_Interrupt_Switch (uint8_t VALUE)
 {
     __HAL_TIM_CLEAR_IT (&htim1, TIM_IT_UPDATE);

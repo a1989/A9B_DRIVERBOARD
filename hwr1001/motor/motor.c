@@ -28,6 +28,9 @@ extern EncoderType GetEncoder;
 float Vel_Exp_Val_tmp = 5;
 //float Vel_Exp_Val_tmp = 1;
 
+#define MOTOR_OFF		HAL_GPIO_WritePin(TMC2590_ENN_GPIO_Port, TMC2590_ENN_Pin,GPIO_PIN_SET)
+#define MOTOR_ON		HAL_GPIO_WritePin(TMC2590_ENN_GPIO_Port, TMC2590_ENN_Pin,GPIO_PIN_RESET)
+
 //步进电机辅助输出脉冲计数器
 /* 私有类型定义 --------------------------------------------------------------*/
 typedef struct
@@ -116,33 +119,39 @@ void DevelopmentFramwork (void)
 
 void MotorSpeedLocatin_Set (float speed, float lacation)
 {
+		//printf ("\r\n l %f", lacation);
     float speed_step = 0.5;
 
     STEPMOTOR_TORQUE_Disable();
     if ((speed - Vel_Exp_Val_tmp) > speed_step)
-	{
-		Vel_Exp_Val_tmp = Vel_Exp_Val_tmp + speed_step;
+		{
+				Vel_Exp_Val_tmp = Vel_Exp_Val_tmp + speed_step;
     }
     else if ((speed - Vel_Exp_Val_tmp) < -speed_step)
-	{
-		Vel_Exp_Val_tmp = Vel_Exp_Val_tmp - speed_step;
+		{
+				Vel_Exp_Val_tmp = Vel_Exp_Val_tmp - speed_step;
     }
     else
     {
-    	Vel_Exp_Val_tmp = speed;
+				Vel_Exp_Val_tmp = speed;
     }
+		
     CaptureNumber = Location_Cnt;
     MSF = GetEncoder.V3;
     MSF = abs (MSF);
     //对速度进行累计,得到1s内的脉冲数
     SUM_Pulse += MSF;
     //位置环PID计算,根据计算结果判断电机运动方向
+		//printf ("\r\n %d", Location_Cnt);
     Dis_Exp_Val = IncPIDCalc (Location_Cnt, lacation, &sPID);
+		//printf ("\r\n %f", Dis_Exp_Val);
     Motion_Dir = Dis_Exp_Val < 0 ? CCW : CW;
     Dis_Exp_Val = abs (Dis_Exp_Val);
+		
     if (Vel_Exp_Val_tmp <= 0)
-	{
-		STEPMOTOR_OUTPUT_DISABLE(); //速度为零直接停止
+		{
+//			printf ("\r\n 1");
+				STEPMOTOR_OUTPUT_DISABLE(); //速度为零直接停止
     }
     else
     {
@@ -151,6 +160,7 @@ void MotorSpeedLocatin_Set (float speed, float lacation)
         {
             Dis_Exp_Val = Vel_Exp_Val_tmp;
         }
+				
         Vel_Exp_Val += IncPIDCalc (MSF, Dis_Exp_Val, &vPID);
         //当到达目标位置的时候,这时候已经电机非常慢了.为了减少超调,可以直接将速度环的输出清零
         if (Vel_Exp_Val <= 0.1)
@@ -160,12 +170,13 @@ void MotorSpeedLocatin_Set (float speed, float lacation)
 			//Vel_Exp_Val_tmp = 1;
         }
         else if (Vel_Exp_Val > (float)motor_maxspeed)
-		{
-			Vel_Exp_Val = (float)motor_maxspeed;
+				{
+						Vel_Exp_Val = (float)motor_maxspeed;
         }
         /* 经过PID计算得到的结果是编码器的输出期望值的增量,
         需要转换为步进电机的控制量(频率值),这里乘上一个系数6400/2400
         */
+//				printf ("\r\n %f", Vel_Exp_Val);
         STEPMOTOR_Motion_Ctrl (Motion_Dir, Vel_Exp_Val * FEEDBACK_CONST); //乘上一个系数,6400/2400,将PID计算结果转换为步进电机的频率(速度)
 //        if ( ( abs ( ( abs ( ( int ) Dis_Target ) - abs ( ( int ) Location_Cnt ) ) ) <20 ) )
 //        {
@@ -242,13 +253,21 @@ void STEPMOTOR_Motion_Ctrl (uint8_t Dir, float Frequency)
 
 void STEPMOTOR_OUTPUT_DISABLE (void) //电机停止运转
 {
-    SPI_DRV8711_Write (CTRL_Register_ADDR, drv8711_ctrl_value & 0xfffe);
+		uint32_t iRead = 0;
+		MOTOR_ON;
+		HAL_TIM_OC_Stop_IT (&htim4, TIM_CHANNEL_1);
+//	  HAL_StatusTypeDef iStatus = SPI_TMC2590_SendByte (0x91930, &iRead);  
+//    SPI_DRV8711_Write (CTRL_Register_ADDR, drv8711_ctrl_value & 0xfffe);
     motor_stop_flag = 1;
 }
 
 void STEPMOTOR_OUTPUT_ENABLE (void) //电机运转
 {
-    SPI_DRV8711_Write (CTRL_Register_ADDR, drv8711_ctrl_value | 0x0001);
+		uint32_t iRead = 0;
+		MOTOR_ON;
+		HAL_TIM_OC_Start_IT (&htim4, TIM_CHANNEL_1);
+//		HAL_StatusTypeDef iStatus = SPI_TMC2590_SendByte (0x91935, &iRead);  
+//   SPI_DRV8711_Write (CTRL_Register_ADDR, drv8711_ctrl_value | 0x0001);
     motor_stop_flag = 0;
 }
 
@@ -256,8 +275,8 @@ void STEPMOTOR_TORQUE_Enable (void) //使能力矩
 {
     if (torque_enable_done == 0)
     {
-        HAL_TIM_OC_Stop_IT (&htim2, TIM_CHANNEL_1);
-        Drv8711_TORQUE_Set (0); // 设置力矩
+        HAL_TIM_OC_Stop_IT (&htim4, TIM_CHANNEL_1);
+ //       Drv8711_TORQUE_Set (0); // 设置力矩
         STEPMOTOR_OUTPUT_ENABLE();
         torque_enable_done = 1;
         torque_disable_done = 0;
@@ -268,8 +287,8 @@ void STEPMOTOR_TORQUE_Disable (void) //失能力矩
 {
     if (torque_disable_done == 0)
     {
-        HAL_TIM_OC_Start_IT (&htim2, TIM_CHANNEL_1);
-        Drv8711_TORQUE_Set (drv_torque_value); // 设置力矩
+        HAL_TIM_OC_Start_IT (&htim4, TIM_CHANNEL_1);
+//        Drv8711_TORQUE_Set (drv_torque_value); // 设置力矩
         STEPMOTOR_OUTPUT_ENABLE();
         torque_disable_done = 1;
         torque_enable_done = 0;
@@ -281,11 +300,14 @@ void STEPMOTOR_DIR_REVERSAL (void)
 {
     if (motor_move_direction_flag == 0)
     {
-        HAL_GPIO_WritePin (DRV8711_DIR_GPIO_Port, DRV8711_DIR_Pin, GPIO_PIN_SET);
+        //HAL_GPIO_WritePin (DRV8711_DIR_GPIO_Port, DRV8711_DIR_Pin, GPIO_PIN_SET);
+				//HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_RESET);
     }
     else if (motor_move_direction_flag == 1)
     {
-        HAL_GPIO_WritePin (DRV8711_DIR_GPIO_Port, DRV8711_DIR_Pin, GPIO_PIN_RESET);
+        //HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_SET);
     }
 }
 
@@ -293,10 +315,19 @@ void STEPMOTOR_DIR_FORWARD (void)
 {
     if (motor_move_direction_flag == 0)
     {
-        HAL_GPIO_WritePin (DRV8711_DIR_GPIO_Port, DRV8711_DIR_Pin, GPIO_PIN_RESET);
+      //  HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_SET);
     }
     else if (motor_move_direction_flag == 1)
     {
-        HAL_GPIO_WritePin (DRV8711_DIR_GPIO_Port, DRV8711_DIR_Pin, GPIO_PIN_SET);
+      //  HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_RESET);
     }
+}
+
+void TMC2590_TestStandalone(void)
+{
+	HAL_GPIO_WritePin (TMC2590_DIR_GPIO_Port, TMC2590_DIR_Pin, GPIO_PIN_RESET);
+	Delay_us(10);
+	HAL_GPIO_TogglePin (GPIOB, TMC2590_Step_Pin);
 }

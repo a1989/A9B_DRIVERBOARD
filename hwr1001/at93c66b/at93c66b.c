@@ -204,112 +204,152 @@ void EEwrite9366(u16 addr,u16 eData)
 //		return true;
 //}
 
-//bool At93c66b_WriteByte (uint16_t iAddress, uint8_t iData, char *strMsg)
-//{   
-////    uint8_t iOP = OP_CODE_WRITE;
-//    HAL_StatusTypeDef iStatus;
-//    char arrMsgTemp[64];
-//    uint8_t arrCmd[2]; 
-//		
-//    if(NULL == strMsg)
-//    {
-//        strcpy(strMsg, "At93c66b_WriteByte strMsg Params Error");
-//        return false;
-//    }
-//    
-//		SPI_93C66_CS_HIGH();
-//		
-//		if(!At93c66b_WriteEnableAddr8(arrMsgTemp))
+bool At93c66b_WriteByte (uint16_t iAddress, uint8_t iData, char *strMsg)
+{   
+//    uint8_t iOP = OP_CODE_WRITE;
+    HAL_StatusTypeDef iStatus;
+    char arrMsgTemp[64];
+    uint8_t arrCmd[2]; 
+		
+    if(NULL == strMsg)
+    {
+        strcpy(strMsg, "At93c66b_WriteByte strMsg Params Error");
+        return false;
+    }
+    
+		#if EEPROM_SPI_USE_NORMAL_IO	//使用IO口模拟SPI
+		
+				CS1;                   //?/???
+				Delay_ms(10);
+				send(EWEN_D,16);
+				send(0x01,2);
+				CS0;
+				Delay_ms(10);  
+				CS1;
+   
+				send(WRITE_D,3);       //????
+				send(iAddress,8);          //???
+				send(iData,16);
+				CS0;
+				at93c46_clock();
+				CS1;
+				at93c46_clock();
+				while(HAL_GPIO_ReadPin(SPI1_CS_GPIO_Port, SPI1_DI_Pin) == 1)
 //		{
-//				strcpy(strMsg, arrMsgTemp);
-//        return false;
+//			printf("read1");
 //		}
-//		
-//		uint16_t iCmd = (OP_CODE_WRITE << 9) | iAddress;
+//    while(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_6)==1) 
+				at93c46_clock();     //????    
+				CS0;
+		
+		#else
+		SPI_93C66_CS_HIGH();
+		
+		if(!At93c66b_WriteEnableAddr8(arrMsgTemp))
+		{
+				strcpy(strMsg, arrMsgTemp);
+        return false;
+		}
+		
+		uint16_t iCmd = (OP_CODE_WRITE << 9) | iAddress;
+		arrCmd[0] = (iCmd >> 8) & 0xFF;
+		arrCmd[1] = iCmd & 0xFF;
+		printf("\r\n At93c66b_WriteByte Write cmd:0x%x", iCmd);
+    iStatus = HAL_SPI_Transmit(&EEPROM_SPI, arrCmd, 2, 0xFFFF);    
+    if(iStatus != HAL_OK)
+    {
+        sprintf(arrMsgTemp, "At93c66b_WriteByte Write Addr 0x%x Failed, Code:0x%x", iAddress, iStatus);
+        strcpy(strMsg, arrMsgTemp);
+        return false;
+    }    
+    
+		iStatus = HAL_SPI_Transmit(&EEPROM_SPI, &iData, 1, 0xFFFF); 
+    if(iStatus != HAL_OK)
+    {
+        sprintf(arrMsgTemp, "At93c66b_WriteByte Write data 0x%x Failed, Code:0x%x", iData, iStatus);
+        strcpy(strMsg, arrMsgTemp);
+        return false;
+    }
+    
+		#endif
+		
+    return true;
+}
+
+bool At93c66b_ReadByte (uint16_t iAddress, uint8_t *iData, char *strMsg)
+{
+    uint8_t iOp = OP_CODE_READ;
+    HAL_StatusTypeDef iStatus;
+    char arrMsgTemp[64];
+		uint8_t arrCmd[2];
+    
+    if(NULL == strMsg)
+    {
+				sprintf(arrMsgTemp, "At93c66b_ReadByte strMsg Params Error");
+				strcpy(strMsg, arrMsgTemp);
+        return false;
+    }
+    
+		#if EEPROM_SPI_USE_NORMAL_IO	//使用IO口模拟SPI
+		    uint8_t iDataRecv;
+				CS1;
+				send(READ_D,3);             
+				send(iAddress,8);               
+				iDataRecv = receive();            
+				CS0;
+				*iData = iDataRecv;				
+		
+		#else
+		SPI_93C66_CS_HIGH();
 //		arrCmd[0] = (iCmd >> 8) & 0xFF;
 //		arrCmd[1] = iCmd & 0xFF;
-//		printf("\r\n At93c66b_WriteByte Write cmd:0x%x", iCmd);
-//    iStatus = HAL_SPI_Transmit(&EEPROM_SPI, arrCmd, 2, 0xFFFF);    
+//    iStatus = HAL_SPI_Transmit(&EEPROM_SPI, &iCmd, 1, 0xFFFF);
 //    if(iStatus != HAL_OK)
 //    {
-//        sprintf(arrMsgTemp, "At93c66b_WriteByte Write Addr 0x%x Failed, Code:0x%x", iAddress, iStatus);
+//        sprintf(arrMsgTemp, "At93c66b_ReadByte Write cmd 0x%x Failed, Code:0x%x", iCmd, iStatus);
 //        strcpy(strMsg, arrMsgTemp);
 //        return false;
 //    }    
-//    
-//		iStatus = HAL_SPI_Transmit(&EEPROM_SPI, &iData, 1, 0xFFFF); 
-//    if(iStatus != HAL_OK)
-//    {
-//        sprintf(arrMsgTemp, "At93c66b_WriteByte Write data 0x%x Failed, Code:0x%x", iData, iStatus);
-//        strcpy(strMsg, arrMsgTemp);
-//        return false;
-//    }
-//    
-//    return true;
-//}
-
-//bool At93c66b_ReadByte (uint16_t iAddress, uint8_t *iData, char *strMsg)
-//{
-//    uint8_t iOp = OP_CODE_READ;
-//    HAL_StatusTypeDef iStatus;
-//    char arrMsgTemp[64];
-//		uint8_t arrCmd[2];
-//    
-//    if(NULL == strMsg)
-//    {
-//				sprintf(arrMsgTemp, "At93c66b_ReadByte strMsg Params Error");
-//				strcpy(strMsg, arrMsgTemp);
-//        return false;
-//    }
-//    
-//		SPI_93C66_CS_HIGH();
-////		arrCmd[0] = (iCmd >> 8) & 0xFF;
-////		arrCmd[1] = iCmd & 0xFF;
-////    iStatus = HAL_SPI_Transmit(&EEPROM_SPI, &iCmd, 1, 0xFFFF);
-////    if(iStatus != HAL_OK)
-////    {
-////        sprintf(arrMsgTemp, "At93c66b_ReadByte Write cmd 0x%x Failed, Code:0x%x", iCmd, iStatus);
-////        strcpy(strMsg, arrMsgTemp);
-////        return false;
-////    }    
-//    
-////		iAddress = iAddress << 7;
-////		arrCmd[0] = (iAddress >> 8) & 0xFF;
-////		arrCmd[1] = iAddress & 0xFF;
-//		uint16_t iCmd = (OP_CODE_READ << 9) | iAddress;
-//		arrCmd[0] = (iCmd >> 8) & 0xFF;
-//		arrCmd[1] = iCmd & 0xFF;
-//		printf("\r\n At93c66b_ReadByte Write cmd:0x%x", iCmd);
-//    iStatus = HAL_SPI_Transmit(&EEPROM_SPI, arrCmd, 2, 0xFFFF);    
+    
+//		iAddress = iAddress << 7;
+//		arrCmd[0] = (iAddress >> 8) & 0xFF;
+//		arrCmd[1] = iAddress & 0xFF;
+		uint16_t iCmd = (OP_CODE_READ << 9) | iAddress;
+		arrCmd[0] = (iCmd >> 8) & 0xFF;
+		arrCmd[1] = iCmd & 0xFF;
+		printf("\r\n At93c66b_ReadByte Write cmd:0x%x", iCmd);
+    iStatus = HAL_SPI_Transmit(&EEPROM_SPI, arrCmd, 2, 0xFFFF);    
+    if(iStatus != HAL_OK)
+    {
+        sprintf(arrMsgTemp, "At93c66b_ReadByte Write Addr 0x%x Failed, Code:0x%x", iAddress, iStatus);
+        strcpy(strMsg, arrMsgTemp);
+        return false;
+    }    
+		
+		HAL_SPI_Receive(&EEPROM_SPI, iData, 1, 0xFFFF);
+    iStatus = HAL_SPI_Receive(&EEPROM_SPI, iData, 1, 0xFFFF);
+    if(iStatus != HAL_OK)
+    {
+        sprintf(arrMsgTemp, "At93c66b_ReadByte Read data Failed, Code:0x%x", iStatus);
+        strcpy(strMsg, arrMsgTemp);
+        return false;
+    }
+//		uint8_t arrRecv[2];
+//		HAL_SPI_TransmitReceive(&EEPROM_SPI, arrCmd, arrRecv, 2, 0xFFFF);  
+//    iStatus = HAL_SPI_TransmitReceive(&EEPROM_SPI, arrCmd, arrRecv, 2, 0xFFFF);    
 //    if(iStatus != HAL_OK)
 //    {
 //        sprintf(arrMsgTemp, "At93c66b_ReadByte Write Addr 0x%x Failed, Code:0x%x", iAddress, iStatus);
 //        strcpy(strMsg, arrMsgTemp);
 //        return false;
 //    }    
-//		
-//		HAL_SPI_Receive(&EEPROM_SPI, iData, 1, 0xFFFF);
-//    iStatus = HAL_SPI_Receive(&EEPROM_SPI, iData, 1, 0xFFFF);
-//    if(iStatus != HAL_OK)
-//    {
-//        sprintf(arrMsgTemp, "At93c66b_ReadByte Read data Failed, Code:0x%x", iStatus);
-//        strcpy(strMsg, arrMsgTemp);
-//        return false;
-//    }
-////		uint8_t arrRecv[2];
-////		HAL_SPI_TransmitReceive(&EEPROM_SPI, arrCmd, arrRecv, 2, 0xFFFF);  
-////    iStatus = HAL_SPI_TransmitReceive(&EEPROM_SPI, arrCmd, arrRecv, 2, 0xFFFF);    
-////    if(iStatus != HAL_OK)
-////    {
-////        sprintf(arrMsgTemp, "At93c66b_ReadByte Write Addr 0x%x Failed, Code:0x%x", iAddress, iStatus);
-////        strcpy(strMsg, arrMsgTemp);
-////        return false;
-////    }    
-//		
-////		printf("\r\n 0x%x,0x%x", arrRecv[0], arrRecv[1]);
-//		
-//    return true;
-//}
+		
+//		printf("\r\n 0x%x,0x%x", arrRecv[0], arrRecv[1]);
+		
+		#endif
+		
+    return true;
+}
 
 //bool At93c66b_WriteWord (uint8_t iAddress, uint16_t iData, char *strMsg)
 //{
@@ -496,3 +536,8 @@ void EEwrite9366(u16 addr,u16 eData)
 //				GPIOA->BRR = GPIO_BRR_BR9;
 //		}
 //}
+
+bool At93c66b_Init(void)
+{
+		
+}

@@ -58,22 +58,26 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define Motor_PWM_CH1_Pin GPIO_PIN_0
-#define Motor_PWM_CH1_GPIO_Port GPIOA
-#define DRV8711_DIR_Pin GPIO_PIN_1
-#define DRV8711_DIR_GPIO_Port GPIOA
+//#define Motor_PWM_CH1_Pin GPIO_PIN_0
+//#define Motor_PWM_CH1_GPIO_Port GPIOA
+#define Motor_PWM_CH1_Pin GPIO_PIN_6
+#define Motor_PWM_CH1_GPIO_Port GPIOB
+//#define DRV8711_DIR_Pin GPIO_PIN_1
+//#define DRV8711_DIR_GPIO_Port GPIOA
 #define Vin_Voltage_SO_Pin GPIO_PIN_4
 #define Vin_Voltage_SO_GPIO_Port GPIOA
 #define INA20X_Current_Sample_SO_Pin GPIO_PIN_5
 #define INA20X_Current_Sample_SO_GPIO_Port GPIOA
-#define Encoder_Phase_A_Pin GPIO_PIN_6
+//#define Encoder_Phase_A_Pin GPIO_PIN_6
+#define Encoder_Phase_A_Pin GPIO_PIN_0
 #define Encoder_Phase_A_GPIO_Port GPIOA
-#define Encoder_Phase_B_Pin GPIO_PIN_7
+//#define Encoder_Phase_B_Pin GPIO_PIN_7
+#define Encoder_Phase_B_Pin GPIO_PIN_1
 #define Encoder_Phase_B_GPIO_Port GPIOA
-#define Motor_nSLEEP_Pin GPIO_PIN_0
-#define Motor_nSLEEP_GPIO_Port GPIOB
-#define Motor_RESET_Pin GPIO_PIN_1
-#define Motor_RESET_GPIO_Port GPIOB
+//#define Motor_nSLEEP_Pin GPIO_PIN_0
+//#define Motor_nSLEEP_GPIO_Port GPIOB
+//#define Motor_RESET_Pin GPIO_PIN_1
+//#define Motor_RESET_GPIO_Port GPIOB
 #define I2C2_SCL_Pin GPIO_PIN_10
 #define I2C2_SCL_GPIO_Port GPIOB
 #define I2C2_SDA_Pin GPIO_PIN_11
@@ -120,6 +124,18 @@ void Error_Handler(void);
 #define SPI1_DI_GPIO_Port GPIOA
 #define SPI1_DO_Pin GPIO_PIN_7
 #define SPI1_DO_GPIO_Port GPIOA
+
+//TMC2590配置
+#define TMC2590_DIR_Pin GPIO_PIN_7
+#define TMC2590_DIR_GPIO_Port GPIOB
+#define TMC2590_ENN_Pin GPIO_PIN_5
+#define TMC2590_ENN_GPIO_Port GPIOB
+
+//Standalone模式下的配置
+#define TMC2590_CFG3_Pin GPIO_PIN_15	//细分 0:256, 1:16
+#define TMC2590_CFG2_Pin GPIO_PIN_13	//Chopper hysteresis 
+#define TMC2590_CFG1_Pin GPIO_PIN_12	//电流倍率分子 0:15, 1:31
+#define TMC2590_Step_Pin GPIO_PIN_6	//脉冲
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

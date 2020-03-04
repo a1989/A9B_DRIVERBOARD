@@ -58,6 +58,7 @@ extern float Dis_Target;             // 目标位置所对应编码器脉冲值
 extern float Vel_Target;             // 每单位采样周期内的脉冲数(频率)
 extern float Vel_Exp_Val;
 extern float Dis_Exp_Val;
+//extern int32_t MSF;
 /* 函数声明 ------------------------------------------------------------------*/
 #define Pi      3.1415927
 #define Beita     Pi/4
@@ -75,4 +76,6 @@ void DevelopmentFramwork (void);
 void Get_Motor_Statues (void);
 void MotorSpeedLocatin_Set (float speed, float lacation);
 void PID_Init (void);
+void TMC2590_TestStandalone(void);
+
 #endif

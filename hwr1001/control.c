@@ -34,6 +34,7 @@ uint8_t  uart1_debug_data_len = 10;//调试串口
 uint8_t uart1_receive_byte = 0; //串口接收的字符
 uint8_t uart1_Receive_Right_flag = 0;//数据接收正确标志
 uint8_t main_request_data_flag = 0;//主控板请求数据
+uint8_t PC_request_data_flag = 0;//上位机请求数据
 uint8_t led_display_cnt_flag = 0;//led闪烁任务
 uint8_t can_send_data_cnt_flag = 0;//CAN发送数据标志
 uint8_t location_write_cnt_flag = 0;//写电机位置标志
@@ -46,7 +47,7 @@ uint8_t percircle_distance = 0;//丝杆模式下转动每圈所运动距离
 uint8_t motor_move_direction_flag = 0;//运动正方向标志位
 uint8_t encoder_cnt_direction_flag = 0;//编码器计数方向
 uint8_t motor_limit_flag = 0;
-uint8_t motor_maxspeed = 120;
+uint8_t motor_maxspeed = 80; //120;
 
 uint32_t ADC_Get_Info[3];
 float ADC_Current_Value;
@@ -92,15 +93,22 @@ void Iwdg_Updata (void)
 //系统控制函数
 void System_Control (void)
 {
+//	printf ("\r\n 1 !");
 	CAN_Receive_Data_Analysis();//数据解析
-	Send_Driver_To_Mian_Data();//发送数据到主控板
+//	printf ("\r\n 2 !");
+	TestUseUart();	//使用串口进行调试
+//	printf ("\r\n 3 !");
+	Send_Driver_To_Main_Data();//发送数据到主控板
+//	printf ("\r\n 4 !");
 	Eep_Data_Update();//任何时候都可以更新
+//	printf ("\r\n 5 !");
 	if (bsp_init_flag == 1) //等待底层初始化完成
 	{
 		if (driver_board_enable_flag == 1)
 		{
-			if ((can_Receive_Right_flag == 1) && (driver_over_current_flag == 0) && (soft_reset_flag ==0)) //驱动板使能,接收数据正确
+			if (( (can_Receive_Right_flag == 1) || (uart1_Receive_Right_flag == 2) ) && (driver_over_current_flag == 0) && (soft_reset_flag ==0)) //驱动板使能,接收数据正确
 			{
+//				printf ("\r\n 6 !");
 				Check_Location();//PID赋值给期望值，位置给定
 			}
 			else
@@ -113,6 +121,7 @@ void System_Control (void)
 
 		}
 	}
+//	printf ("\r\n 6 !");
 	iwdg_system_flag = 1;
 }
 
@@ -168,12 +177,64 @@ void Driver_Board_Parameter_Init (void)
 //	}
 	
 	printf("\r\n write ee ID");
-	EEwrite9366(0x5400,0x22);
+	At93c66b_WriteByte(0xF0,0x36, arrMsg);
+//	EEwrite9366(0x5400,0x22);
 	printf("\r\n delay ee ID");
 	Delay_ms(500);
 	printf("\r\n read ee ID");
-	eep_driver_id = EEread9366(0x5400);
-	printf("\r\n Read ID:%d", eep_driver_id);
+//	eep_driver_id = EEread9366(0x5400);
+	At93c66b_ReadByte(0xF0, &eep_driver_id, arrMsg);
+	printf("\r\n Read ID:%x", eep_driver_id);
+	
+	return;
+	
+	if(At93c66b_ReadByte(0xF0, &eep_driver_id, arrMsg))	//80地址为板卡的ID
+	{
+			printf ("\r\n Read ID Failed:%s", arrMsg);
+			return;			
+	}
+
+	if(At93c66b_ReadByte(0xF1, &eep_motor_torque, arrMsg))	//81地址为板卡的电流
+	{
+			printf ("\r\n Read Torque Failed:%s", arrMsg);
+			return;				
+	}
+	
+	if(At93c66b_ReadByte (0xF2, &eep_motor_step_value, arrMsg))	//82地址为板卡细分设置
+	{
+			printf ("\r\n Read Step Value Failed:%s", arrMsg);
+			return;
+	}
+	
+	if(eep_motor_torque >= 32)
+	{
+			eep_motor_torque = 8;
+	}
+	
+	drv_torque_value = eep_motor_torque;//设置电流
+	motor_step_value = eep_motor_step_value;//读取细分
+	driver_can_stdid = eep_driver_id;//读取ID
+	location_addr = eep_location_addr;
+	
+	if (Start_Position_Read() == 1) //start position
+	{
+		Delay_ms(10);
+		if (Start_Position_Read() == 1) //start position
+		{
+			eep_motor_location = 0;
+		}
+	}
+	else
+	{
+		eep_motor_location = MOTOR_MAXPLUS;
+	}
+	
+	Location_Cnt = eep_motor_location;
+	Dis_Target = eep_motor_location;
+	gCurrent_pos = eep_motor_location;		//zyg 2019.8.28
+	CaptureNumber = eep_motor_location;
+	Location_Cnt_tmp = eep_motor_location;
+
 	return;
 //	eep_driver_id =  At24c512_ReadByte ( 0xF0 ); //80地址为板卡的ID
 //	eep_motor_torque = At24c512_ReadByte ( 0xF1 ); //81地址为板卡的电流
@@ -219,9 +280,9 @@ void Driver_Board_Parameter_Init (void)
 	gCurrent_pos = eep_motor_location;		//zyg 2019.8.28
 	CaptureNumber = eep_motor_location;
 	Location_Cnt_tmp = eep_motor_location;
-	set_motor_current = Drv8711_Ifs_Set (drv_torque_value);
+//	set_motor_current = Drv8711_Ifs_Set (drv_torque_value);
 	//Drv8711_Ifs_Set (drv_torque_value);
-	Drv8711_TORQUE_Set (drv_torque_value); // 设置力矩
+//	Drv8711_TORQUE_Set (drv_torque_value); // 设置力矩
         
 //	printf ("\r\n 读取板卡设置参数");
 //	printf ("\r\n 驱动器ID:%x", driver_can_stdid);
@@ -252,8 +313,8 @@ void Eep_Data_Update ( void )
 		torque = At24c512_ReadByte (0xF1);
 		step = At24c512_ReadByte (0xF2);
 		At24c512_ReadByte (0xF2);
-		current = Drv8711_Ifs_Set (torque);
-		Drv8711_Ifs_Set (torque);
+//		current = Drv8711_Ifs_Set (torque);
+//		Drv8711_Ifs_Set (torque);
 		printf ("\r\n ID:0x%x current:%2.3fA step:%d ", ID, current, step);
 		printf ("\r\n parameters updada succees!......");
 		uart1_Receive_Right_flag = 0;//置0
@@ -360,7 +421,7 @@ void CAN_SendData_Acquisition (void)
 
 	DRIVER_TO_MAIN_DATA[0] = SetByte_Bit (DRIVER_TO_MAIN_DATA[0], 0, Start_Position_Read());
 	DRIVER_TO_MAIN_DATA[0] = SetByte_Bit (DRIVER_TO_MAIN_DATA[0], 1, End_Position_Read());
-	DRIVER_TO_MAIN_DATA[2] = drv8711_status_value;//驱动器状态寄存器值
+//	DRIVER_TO_MAIN_DATA[2] = drv8711_status_value;//驱动器状态寄存器值
 	DRIVER_TO_MAIN_DATA[3] = nLocationCnt >> 24;
 	DRIVER_TO_MAIN_DATA[4] = (nLocationCnt >> 16) & 0x00ff;
 	DRIVER_TO_MAIN_DATA[5] = (nLocationCnt >> 8) & 0x0000ff;
@@ -514,9 +575,10 @@ void Check_Location (void)
 }
 
 //CAN发送数据
-void Send_Driver_To_Mian_Data (void)
+void Send_Driver_To_Main_Data (void)
 {
-	if ((main_request_data_flag == 1)) //数据请求了在发送&& ( can_send_data_cnt_flag ==1 ) can_send_data_cnt_flag = 0;
+//	printf("\r\n CAN Send");
+	if (main_request_data_flag == 1) //数据请求了在发送&& ( can_send_data_cnt_flag ==1 ) can_send_data_cnt_flag = 0;
 	{
 		CAN_SendData_Acquisition();//加载数据
 		CAN_SetMsg();//填充数据
@@ -583,6 +645,15 @@ void CAN_SetMsg (void)
 	{
 		TxMessage.Data[ubCounter] = DRIVER_TO_MAIN_DATA[ubCounter];
 	}
+	
+	TxMessage.Data[0] = 1;
+	TxMessage.Data[0] = 2;
+	TxMessage.Data[0] = 3;
+	TxMessage.Data[0] = 4;
+	TxMessage.Data[0] = 5;
+	TxMessage.Data[0] = 6;
+	TxMessage.Data[0] = 7;
+	TxMessage.Data[0] = 8;
 }
 
 //CAN筛选器配置
@@ -621,4 +692,75 @@ void Ina201_ADC_Get (void)
 	//printf("\r\n ADC_Voltage_Value:%f",ADC_Voltage_Value);
 	//printf("\r\n ADC_Current_Value:%f",ADC_Current_Value);
 	//printf("\r\n ADC_Temperature_Value:%f",ADC_Temperature_Value);
+}
+
+void TestUseUart(void)
+{
+	if (uart1_Receive_Right_flag == 2) //接收到正确数据, 并且是
+	{
+			driver_board_enable_flag = ReadByte_Bit (UARTI_DEBUG_DATA[0], 0); //电机使能标志
+			PC_request_data_flag = ReadByte_Bit (UARTI_DEBUG_DATA[0], 7);   //请求数据
+			soft_reset_flag = ReadByte_Bit (UARTI_DEBUG_DATA[0], 1);          //软件急停
+			motor_move_direction_flag = ReadByte_Bit (UARTI_DEBUG_DATA[0], 2); //方向
+			encoder_cnt_direction_flag = ReadByte_Bit (UARTI_DEBUG_DATA[0], 3); //编码器计数方向
+
+			Aim_Location = (s32)((UARTI_DEBUG_DATA[3] << 24) + (UARTI_DEBUG_DATA[4] << 16) + (UARTI_DEBUG_DATA[5] << 8) + UARTI_DEBUG_DATA[6]); //关节电机
+			if (Aim_Location > 12000000)
+			{
+				Aim_Location = 12000000;
+			}
+			if (Aim_Location < -12000000)
+			{
+				Aim_Location = -12000000;
+			}
+			
+			motor_speed = (UARTI_DEBUG_DATA[7]); //速度赋值		
+			uart1_Receive_Right_flag = 0;//置0
+			
+			if ((motor_limit_flag == 1) || (motor_limit_flag == 2))
+			{
+				motor_speed = 30;
+				if(motor_limit_flag == 1)
+				{
+					if(Aim_Location <= 10)
+					{
+						Aim_Location = 0;	//在零位时不执行负方向
+					}
+				}
+				if(motor_limit_flag == 2)
+				{
+					if(Aim_Location > Location_Cnt)
+					{
+						Aim_Location = Location_Cnt;
+					}
+				}
+					}
+			else
+			{
+				if (motor_speed > motor_maxspeed)
+				{
+					motor_speed = motor_maxspeed;
+				}
+				if(Aim_Location < 0)	//运动过程中收到负值，需要复位
+				{
+					if(gCurrent_pos > (Location_Cnt + 4000))
+					{
+						gCurrent_pos = Location_Cnt + 4000;
+					}
+				}
+			}
+	}
+}
+
+void UartDebugSend(void)
+{
+	char arrUartSend[128];
+//	printf ("\r\n LCN: %x", Location_Cnt);
+//	printf ("\r\n Spd: %x", MSF);
+//	printf ("\r\n aLCN: %x", Aim_Location);
+//	printf ("\r\n aSpd: %x", motor_speed);
+	
+//	sprintf(arrUartSend, "\r\n Info: EBEA%02x,%08x,%02x,%08x,%02x", 0x0, Aim_Location, motor_speed, Location_Cnt, MSF);
+	sprintf(arrUartSend, "\r\n Info: EBEA%02x,%08x,%02x,%08x,%02x", 0x0, Aim_Location, motor_speed, GetEncoder.rcnt3, MSF);
+	printf("%s", arrUartSend);
 }

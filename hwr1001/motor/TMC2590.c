@@ -10,6 +10,9 @@ unRegSGCSCONF   g_unRegSgcsConfConfig;
 
 char arrErrorString[16];
 
+uint8_t motor_step_value = 32;//细分设置，默认16细分
+uint8_t TMC2590_error_status = 0;
+
 //通过返回码获得字符串
 static char *ErrorCodeToString(HAL_StatusTypeDef iErrorCode)
 {
@@ -42,7 +45,7 @@ static char *ErrorCodeToString(HAL_StatusTypeDef iErrorCode)
 }
 
 //SPI发送数据, 分3个Byte发送
-static HAL_StatusTypeDef SPI_TMC2590_SendByte (uint32_t iWriteData, uint32_t *iRecvData)
+HAL_StatusTypeDef SPI_TMC2590_SendByte (uint32_t iWriteData, uint32_t *iRecvData)
 {
     uint8_t Send_Buffer[3];
     uint8_t Recv_Buffer[3];
@@ -51,15 +54,21 @@ static HAL_StatusTypeDef SPI_TMC2590_SendByte (uint32_t iWriteData, uint32_t *iR
     Send_Buffer[1] = (iWriteData >> 8) & 0xFF;
     Send_Buffer[2] = (iWriteData) & 0xFF;
 			
-		printf("\r\n 0x%x", Send_Buffer[0]);
-		printf("\r\n 0x%x", Send_Buffer[1]);
-		printf("\r\n 0x%x", Send_Buffer[2]);
+//		printf("\r\n 0x%x", Send_Buffer[0]);
+//		printf("\r\n 0x%x", Send_Buffer[1]);
+//		printf("\r\n 0x%x", Send_Buffer[2]);
 	
-//    HAL_StatusTypeDef iStatus = HAL_SPI_TransmitReceive (&TMC2590_SPI, Send_Buffer, Recv_Buffer, 3, 0xFFFFFF);    
-    HAL_StatusTypeDef iStatus = HAL_SPI_Transmit (&TMC2590_SPI, Send_Buffer, 3, 0xFFFFFF);
+		SPI_TMC2590_CS_HIGH();
+		Delay_ms (1);
+    SPI_TMC2590_CS_LOW();
+//		Delay_ms (5);
+	
+    HAL_StatusTypeDef iStatus = HAL_SPI_TransmitReceive (&TMC2590_SPI, Send_Buffer, Recv_Buffer, 3, 0xFFFFFF);    
+//    HAL_StatusTypeDef iStatus = HAL_SPI_Transmit (&TMC2590_SPI, Send_Buffer, 3, 0xFFFFFF);
     
     *iRecvData = (Recv_Buffer[0] << 16) | (Recv_Buffer[1] << 8) | (Recv_Buffer[2]);
-    
+    SPI_TMC2590_CS_HIGH();
+		Delay_ms (5);
 		printf("\r\n Send Data 0x%x", iWriteData);
 		printf("\r\n Recv Data 0x%x", *iRecvData);
     return iStatus;
@@ -104,52 +113,57 @@ HAL_StatusTypeDef TMC2590_ReadSingleStatus (ReadSelect iSelect, uint32_t *iValue
     return iStatus;
 }
 
-
-bool TMC2590_GetStatus(HAL_StatusTypeDef *iErrorCode)
+bool ReadStatuBit(uint32_t iStatus, uint32_t iPos)
 {
-    HAL_StatusTypeDef iStatus;
-    
-    uint32_t iReadValue = 0;
-    uint8_t iBitValue = 0;
-    
-    iStatus = TMC2590_ReadSingleStatus(MICRO_STEP_POSITION, &iReadValue);
-    if(iStatus != HAL_OK)
-    {
-        *iErrorCode = iStatus;
-        return false;
-    }
-    
-    iStatus = TMC2590_ReadSingleStatus(STALL_GUARD_VALUE, &iReadValue);
-    if(iStatus != HAL_OK)
-    {
-        *iErrorCode = iStatus;
-        return false;
-    }
-    
-    iStatus = TMC2590_ReadSingleStatus(STALL_GUARD_COOL_STEP, &iReadValue);
-    if(iStatus != HAL_OK)
-    {
-        *iErrorCode = iStatus;
-        return false;
-    }
-    
-    iStatus = TMC2590_ReadSingleStatus(ALL_STATUS, &iReadValue);
-    if(iStatus != HAL_OK)
-    {
-        *iErrorCode = iStatus;
-        return false;
-    }
-    
-    iBitValue = ReadDataBit(iReadValue, BIT_SG);
-    iBitValue = ReadDataBit(iReadValue, BIT_OT);
-    iBitValue = ReadDataBit(iReadValue, BIT_OTPW);
-    iBitValue = ReadDataBit(iReadValue, BIT_SHORTA);
-    iBitValue = ReadDataBit(iReadValue, BIT_SHORTB);
-    iBitValue = ReadDataBit(iReadValue, BIT_OLA);
-    iBitValue = ReadDataBit(iReadValue, BIT_OLB);
-    iBitValue = ReadDataBit(iReadValue, BIT_STST);
-    
-    return true;
+		return ( (iStatus & (1 << iPos)) != 0 );
+}
+
+void TMC2590_GetStatus(StructStatus *structStatus)
+{
+		uint32_t iRead = 0;
+		bool bIsOccur = false;
+	
+		HAL_StatusTypeDef iStatus = SPI_TMC2590_SendByte (0xEF040, &iRead);
+		iStatus = SPI_TMC2590_SendByte (0xEF050, &iRead);
+	
+		iRead = (iRead >> 4) & 0xFFFFF;
+	
+		structStatus->StallGuard = (iRead >> 10) & 0x3FF;
+		structStatus->iValue = iRead;
+	
+		//检测堵转
+		if(ReadStatuBit(iRead, SG_POS))
+		{
+				
+		}
+		
+		//A相短路
+		if(ReadStatuBit(iRead, SG_SHORTA))
+		{
+				driver_over_current_flag = 1;
+		}
+		
+		//B相短路
+		if(ReadStatuBit(iRead, SG_SHORTB))
+		{
+				driver_over_current_flag = 1;
+		}
+		
+		//A相开路
+		if(ReadStatuBit(iRead, SG_OLA))
+		{
+				
+		}		
+
+		//B相开路
+		if(ReadStatuBit(iRead, SG_OLB))
+		{
+				
+		}				
+		
+		structStatus->iStallOccurs = iRead  & 0x1;
+		
+//		iStatus = SPI_TMC2590_SendByte (0xEF060, &iRead);		
 }
 
 // 设置细分
@@ -205,20 +219,28 @@ bool TMC2590_SetMicroStep (uint16_t iValue, HAL_StatusTypeDef *iErrorCode)
 }
 
 //设置电流
-uint16_t TMC2590_SetCurrent (uint8_t value)
+bool TMC2590_SetCurrent (uint16_t iValue, HAL_StatusTypeDef *iErrorCode)
 {
-//    uint16_t tmp0;
-//    uint8_t  tmp1;
-//
-//    tmp0 = drv8711_torque_value;
-//    tmp1 = value;
-//    tmp0 = (tmp0 & 0xff00) | tmp1;
-//    drv8711_torque_value = tmp0;
-//    SPI_DRV8711_Write (REG_CURRENT, tmp0);
-    return 0;
+		HAL_StatusTypeDef iStatus;
+		if(iValue > 31)
+		{
+				iValue = 31;
+		}
+		
+		g_unRegSgcsConfConfig.structReg.iCS = iValue;
+		
+	  iStatus = TMC2590_SetReg (REG_SGCSCONF, g_unRegSgcsConfConfig.iRegValue);
+    if(iStatus != HAL_OK)
+    {
+        *iErrorCode = iStatus;
+        return false;
+    }
+		
+    return true;
 }
 
-uint16_t TMC2590_TorqueSet (uint8_t value)
+//设置力矩
+bool TMC2590_SetTorque (uint8_t value, HAL_StatusTypeDef *iErrorCode)
 {
 //    uint16_t tmp0;
 //    uint8_t  tmp1;
@@ -229,7 +251,9 @@ uint16_t TMC2590_TorqueSet (uint8_t value)
 //    drv8711_torque_value = tmp0;
 //    SPI_DRV8711_Write (REG_CURRENT, tmp0);
 //    return tmp0;
-    return 0;
+		
+	
+    return true;
 }
 
 static bool TMC2590_SetTypicalCHOPCONF(HAL_StatusTypeDef *iErrorCode)
@@ -353,7 +377,7 @@ static bool TMC2590_SetTypicalDRVCONF(HAL_StatusTypeDef *iErrorCode)
     //%01:StallGuard2 level read back
     //%10:StallGuard2 and CoolStep current level read back
     //%11:All status flags and detectors
-    g_unRegDrvConfConfig.structReg.iRDSEL = 0;
+    g_unRegDrvConfConfig.structReg.iRDSEL = 0x2;
     
     //Overtemperature sensitivity
     //0: Shutdown at 150°C
@@ -448,7 +472,7 @@ static bool TMC2590_SetTypicalSGCSCONF(HAL_StatusTypeDef *iErrorCode)
     //Current scale(scales digital currents A and B)
     //Current scaling for SPI and STEP/DIR operation.
     //%00000 … %11111: 1/32, 2/32, 3/32, … 32/32
-    g_unRegSgcsConfConfig.structReg.iCS = 0x8;
+    g_unRegSgcsConfConfig.structReg.iCS = 20;
     
     iRegValue = g_unRegSgcsConfConfig.iRegValue;
 	
@@ -483,23 +507,57 @@ static bool TMC2590_SetTypicalSGCSCONF(HAL_StatusTypeDef *iErrorCode)
 //    }
 //}
 
-void TMC2590_Init (void)
+bool TMC2590_Init (void)
 {
     printf ("\r\n TMC2590 Start Init!");
-    Delay_ms(1);
+    Delay_ms(200);
   
     uint32_t iRead = 0;
     /* Select the FLASH: Chip Select low */
-    SPI_TMC2590_CS_HIGH();
-		Delay_ms (5);
-    SPI_TMC2590_CS_LOW();
-		Delay_ms (5);
+//    SPI_TMC2590_CS_HIGH();
+//		Delay_ms (5);
+//    SPI_TMC2590_CS_LOW();
+//		Delay_ms (5);
+	
 //    HAL_StatusTypeDef iStatus = SPI_TMC2590_SendByte (0x901b4, &iRead);  
-//		iStatus = SPI_TMC2590_SendByte (0xd001f, &iRead);  
-//		iStatus = SPI_TMC2590_SendByte (0xef013, &iRead);  
-//		iStatus = SPI_TMC2590_SendByte (0x00000, &iRead);  
-//		iStatus = SPI_TMC2590_SendByte (0xa0222, &iRead);  
-//		return;
+//		iStatus = SPI_TMC2590_SendByte (0xd0010, &iRead);  
+//		iStatus = SPI_TMC2590_SendByte (0xef020, &iRead);
+//		iStatus = SPI_TMC2590_SendByte (0x00003, &iRead);  
+//		iStatus = SPI_TMC2590_SendByte (0xa8202, &iRead);  
+
+//	  HAL_StatusTypeDef iStatus = SPI_TMC2590_SendByte (0x00003, &iRead);  
+//		printf ("\r\n s%d!", iStatus);
+//		iStatus = SPI_TMC2590_SendByte (0x91935, &iRead);  
+//		printf ("\r\n s%d!", iStatus);
+//		iStatus = SPI_TMC2590_SendByte (0xA0000, &iRead);
+//		printf ("\r\n s%d!", iStatus);
+//		iStatus = SPI_TMC2590_SendByte (0xD0810, &iRead);  //StallGuard无需传感器情况下实现步进电机力矩控制, CoolStep无需传感器情况驱动器输出的电流随负载动态变化, 节省电能, 避免发热, 允许过载
+//		printf ("\r\n s%d!", iStatus);
+//		iStatus = SPI_TMC2590_SendByte (0xEF040, &iRead);  
+//		printf ("\r\n s%d!", iStatus);
+		HAL_GPIO_WritePin(TMC2590_ENN_GPIO_Port, TMC2590_ENN_Pin,GPIO_PIN_SET);
+		
+		#if TMC2590_STANDALONE
+				HAL_GPIO_WritePin(GPIOB, TMC2590_CFG3_Pin, GPIO_PIN_SET);
+				motor_step_value = 16;
+				HAL_GPIO_WritePin(GPIOB, TMC2590_CFG2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(GPIOB, TMC2590_CFG1_Pin, GPIO_PIN_RESET);				
+		#else
+			HAL_StatusTypeDef iStatus = SPI_TMC2590_SendByte (0x901b4, &iRead);  
+			iStatus = SPI_TMC2590_SendByte (0xD0008, &iRead);  
+			iStatus = SPI_TMC2590_SendByte (0xEF000, &iRead);
+			iStatus = SPI_TMC2590_SendByte (0x00003, &iRead);  
+			iStatus = SPI_TMC2590_SendByte (0xA8202, &iRead);  
+		#endif
+		Delay_ms(5);
+//		HAL_GPIO_WritePin(TMC2590_ENN_GPIO_Port, TMC2590_ENN_Pin,GPIO_PIN_RESET);
+		Delay_ms(5);
+//		HAL_GPIO_WritePin(SIGNAL_LED_G_GPIO_Port, SIGNAL_LED_G_Pin,GPIO_PIN_RESET);
+//		HAL_GPIO_WritePin(SIGNAL_LED_R_GPIO_Port, SIGNAL_LED_R_Pin,GPIO_PIN_SET);
+//		HAL_GPIO_WritePin(SIGNAL_LED_B_GPIO_Port, SIGNAL_LED_B_Pin,GPIO_PIN_SET);
+		Delay_ms(100);
+		
+		return true;
 	
 		
 	
@@ -509,28 +567,28 @@ void TMC2590_Init (void)
     if(!TMC2590_SetTypicalCHOPCONF(&iErrorCode))
     {
         printf("\r\n Set CHOPCONF Failed! Msg:%s", ErrorCodeToString(iErrorCode));
-        return;
+        return false;
     }   
     Delay_ms(1);  
 	
 		if(!TMC2590_SetTypicalSGCSCONF(&iErrorCode))
     {
         printf("\r\n Set SGCSCONF Failed! Msg:%s", ErrorCodeToString(iErrorCode));
-        return;
+        return false;
     }   
     Delay_ms(1);
 		
     if(!TMC2590_SetTypicalDRVCONF(&iErrorCode))
     {
         printf("\r\n Set DRVCONF Failed! Msg:%s", ErrorCodeToString(iErrorCode));
-        return;
+        return false;
     }    
     Delay_ms(1);
     
     if(!TMC2590_SetTypicalDRVCTRL(&iErrorCode))
     {
         printf("\r\n Set DRVCTRL Failed! Msg:%s", ErrorCodeToString(iErrorCode));
-        return;
+        return false;
     }   
     Delay_ms(1);
     
@@ -539,7 +597,7 @@ void TMC2590_Init (void)
     if(!TMC2590_SetTypicalSMARTEN(&iErrorCode))
     {
         printf("\r\n Set SMARTEN Failed! Msg:%s", ErrorCodeToString(iErrorCode));
-        return;
+        return false;
     }   
     Delay_ms(1);
     
@@ -573,4 +631,3 @@ void TMC2590_Init (void)
     //STEPMOTOR_OUTPUT_DISABLE();
  //   STEPMOTOR_OUTPUT_ENABLE();//这里设置输出使能才能使能力矩
 }
-

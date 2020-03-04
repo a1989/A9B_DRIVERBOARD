@@ -29,6 +29,7 @@ typedef struct
 
 void Get_Encoder_3 (void);
 void TIM3_Encoder_Switch (uint8_t VALUE);
+void TIM2_Encoder_Switch (uint8_t VALUE);
 void Encoder_Config (void);
 void Encoder_Total (void);
 #endif

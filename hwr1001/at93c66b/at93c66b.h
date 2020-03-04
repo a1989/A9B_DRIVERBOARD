@@ -7,8 +7,8 @@
 #include "includes.h"
 
 
-//bool At93c66b_WriteByte (uint16_t iAddress, uint8_t iData, char *strMsg);
-//bool At93c66b_ReadByte (uint16_t iAddress, uint8_t *iData, char *strMsg);
+bool At93c66b_WriteByte (uint16_t iAddress, uint8_t iData, char *strMsg);
+bool At93c66b_ReadByte (uint16_t iAddress, uint8_t *iData, char *strMsg);
 //bool At93c66b_WriteWord (uint8_t iAddress, uint16_t iData, char *strMsg);
 //bool At93c66b_ReadWord (uint8_t iAddress, uint8_t *iData, char *strMsg);
 //bool At93c66b_WriteAll (uint8_t iData, char *strMsg);
@@ -17,5 +17,6 @@
 
 u16 EEread9366(u16 addr);
 void EEwrite9366(u16 addr,u16 eData);
+bool At93c66b_Init(void);
 
 #endif

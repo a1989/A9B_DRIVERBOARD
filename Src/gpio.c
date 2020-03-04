@@ -27,8 +27,33 @@
 /* Configure GPIO                                                             */
 /*----------------------------------------------------------------------------*/
 /* USER CODE BEGIN 1 */
-
+void TMC2590_StandaloneInit(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	
+	GPIO_InitStruct.Pin = TMC2590_CFG3_Pin | TMC2590_CFG2_Pin | TMC2590_CFG1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
 /* USER CODE END 1 */
+
+void At93c66b_GPIO_Init(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	
+	GPIO_InitStruct.Pin = SPI1_CS_Pin | SPI1_CK_Pin | SPI1_DO_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+  HAL_GPIO_Init(SPI1_CS_GPIO_Port, &GPIO_InitStruct);
+
+	GPIO_InitStruct.Pin = SPI1_DI_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(SPI1_CS_GPIO_Port, &GPIO_InitStruct);
+}
 
 /** Configure pins as 
         * Analog 
@@ -48,52 +73,41 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(DRV8711_DIR_GPIO_Port, DRV8711_DIR_Pin, GPIO_PIN_RESET);
+//  HAL_GPIO_WritePin(DRV8711_DIR_GPIO_Port, DRV8711_DIR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, Motor_nSLEEP_Pin|Motor_RESET_Pin|SPI2_CS_Pin, GPIO_PIN_RESET);
+//  HAL_GPIO_WritePin(GPIOB, Motor_nSLEEP_Pin|Motor_RESET_Pin|SPI2_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, SIGNAL_LED_G_Pin|SIGNAL_LED_R_Pin|SIGNAL_LED_B_Pin, GPIO_PIN_SET);
+//  HAL_GPIO_WritePin(GPIOB, SIGNAL_LED_G_Pin|SIGNAL_LED_R_Pin|SIGNAL_LED_B_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = DRV8711_DIR_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(DRV8711_DIR_GPIO_Port, &GPIO_InitStruct);
+//  GPIO_InitStruct.Pin = DRV8711_DIR_Pin;
+//  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+//  GPIO_InitStruct.Pull = GPIO_NOPULL;
+//  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+//  HAL_GPIO_Init(DRV8711_DIR_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = Motor_nSLEEP_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
-  HAL_GPIO_Init(Motor_nSLEEP_GPIO_Port, &GPIO_InitStruct);
+//  GPIO_InitStruct.Pin = Motor_nSLEEP_Pin;
+//  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+//  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+//  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+//  HAL_GPIO_Init(Motor_nSLEEP_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = Motor_RESET_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(Motor_RESET_GPIO_Port, &GPIO_InitStruct);
+//  GPIO_InitStruct.Pin = Motor_RESET_Pin;
+//  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+//  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+//  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+//  HAL_GPIO_Init(Motor_RESET_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = SPI2_CS_Pin;
+  GPIO_InitStruct.Pin = SPI2_CS_Pin;// | SPI2_SCK_Pin | SPI2_MISO_Pin | SPI2_MOSI_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
   HAL_GPIO_Init(SPI2_CS_GPIO_Port, &GPIO_InitStruct);
-	
-	GPIO_InitStruct.Pin = SPI1_CS_Pin|SPI1_CK_Pin|SPI1_DO_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
-  HAL_GPIO_Init(SPI1_CS_GPIO_Port, &GPIO_InitStruct);
-
-	GPIO_InitStruct.Pin = SPI1_DI_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(SPI1_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
   GPIO_InitStruct.Pin = INA20X_CMPOUT_Pin;
@@ -108,15 +122,37 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PBPin PBPin PBPin */
-  GPIO_InitStruct.Pin = SIGNAL_LED_G_Pin|SIGNAL_LED_R_Pin|SIGNAL_LED_B_Pin;
+//  GPIO_InitStruct.Pin = SIGNAL_LED_G_Pin|SIGNAL_LED_R_Pin|SIGNAL_LED_B_Pin;
+//  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+//  GPIO_InitStruct.Pull = GPIO_NOPULL;
+//  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+//  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = TMC2590_ENN_Pin | TMC2590_DIR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	
+	GPIO_InitStruct.Pin = GPIO_PIN_13 | GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+//  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+//	GPIO_Init(GPIOC, &GPIO_InitStructure);
 
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	
+	#if TMC2590_TEST_WITH_OC
+//	  GPIO_InitStruct.Pin = GPIO_PIN_6;
+//		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+//		GPIO_InitStruct.Pull = GPIO_NOPULL;
+//		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+//		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	#endif
 }
 
 /* USER CODE BEGIN 2 */
+
+
 
 /* USER CODE END 2 */
 

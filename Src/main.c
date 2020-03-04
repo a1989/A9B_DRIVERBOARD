@@ -95,20 +95,33 @@ int main(void)
 	/* USER CODE BEGIN SysInit */
 
 	/* USER CODE END SysInit */
-
+	Delay_Init();
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_DMA_Init();
-//	MX_TIM2_Init();
+	MX_TIM2_Init();
 //	MX_ADC1_Init();
-//	MX_TIM3_Init();
+	MX_TIM3_Init();
 	MX_USART1_UART_Init();
 	MX_CAN_Init();
 //	MX_I2C2_Init();
-//	MX_SPI1_Init();
-	MX_SPI2_Init();
-//	MX_TIM1_Init();
-//	MX_TIM4_Init();
+	
+	//EEPROM是否使用模拟IO
+	#if EEPROM_SPI_USE_NORMAL_IO
+		At93c66b_GPIO_Init();
+	#else
+		MX_SPI1_Init();
+	#endif
+
+	//TMC2590是否使用独立模式
+	#if TMC2590_STANDALONE
+//		TMC2590_StandaloneInit();	//
+	#else
+		MX_SPI2_Init();
+	#endif
+	
+	MX_TIM1_Init();
+	MX_TIM4_Init();
 //	MX_IWDG_Init();
 
 	/* Initialize interrupts */
@@ -119,20 +132,44 @@ int main(void)
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-	
-	HAL_GPIO_WritePin(SIGNAL_LED_G_GPIO_Port, SIGNAL_LED_G_Pin,GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(SIGNAL_LED_B_GPIO_Port, SIGNAL_LED_B_Pin,GPIO_PIN_RESET);
-	TMC2590_Init();
-	HAL_GPIO_WritePin (SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
-	Driver_Board_Parameter_Init ();
+//	TMC2590_Init();
+	uint32_t i = 0;
+//	TIM1_IT_Interrupt_Switch (1);
+//	StructStatus structRead;
+			printf ("\r\n start");
+		
+	Delay_ms(600);
+//	Driver_Board_Parameter_Init();
 	while (1)
-	{
+	{		
+		if(i > 300000)//if(g_bEnUartDebugSend)
+		{	
+//			TMC2590_Init();
+//			TMC2590_GetStatus(&structRead);
+//				printf("\r\n %d", Location_Cnt);
+//			UartDebugSend();
+			i = 0;
+			g_bEnUartDebugSend = false;
+		}
+		else
+		{
+			i++;
+		}
 //		Driver_Board_Parameter_Init ();
 //		Delay_ms(1000);
+
 	/* USER CODE END WHILE */
 
 	/* USER CODE BEGIN 3 */
+//		printf ("\r\n 1");
 		LED_Running();
+//		printf ("\r\n 2");
+//	HAL_GPIO_WritePin (GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+	//Delay_ms(1); //Delay_us(200);
+//	Delay_us(50);
+//	HAL_GPIO_WritePin (GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+	//Delay_ms(1);
+//	Delay_us(50);
 	}
 	/* USER CODE END 3 */
 }
@@ -189,20 +226,33 @@ void SystemClock_Config(void)
 static void MX_NVIC_Init(void)
 {
   /* USART1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USART1_IRQn, 3, 0);
+//  HAL_NVIC_SetPriority(USART1_IRQn, 3, 0);
+//  HAL_NVIC_EnableIRQ(USART1_IRQn);
+	HAL_NVIC_SetPriority(USART1_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* EXTI9_5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
   /* TIM2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM2_IRQn);
-  /* TIM3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM3_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(TIM3_IRQn);
-  /* TIM4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM4_IRQn, 2, 0);
+	//OC中断的优先级
+//  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
+//  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+	HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM4_IRQn);
+  /* TIM3_IRQn interrupt configuration */
+	//编码器中断优先级
+//  HAL_NVIC_SetPriority(TIM3_IRQn, 5, 0);
+//  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+	HAL_NVIC_SetPriority(TIM2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  /* TIM4_IRQn interrupt configuration */
+	//事件处理中断优先级
+//  HAL_NVIC_SetPriority(TIM4_IRQn, 2, 0);
+//  HAL_NVIC_EnableIRQ(TIM4_IRQn);
+//	HAL_NVIC_SetPriority(TIM3_IRQn, 2, 0);
+//  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+	HAL_NVIC_SetPriority(TIM3_IRQn, 3, 0);
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);
   /* DMA1_Channel4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);

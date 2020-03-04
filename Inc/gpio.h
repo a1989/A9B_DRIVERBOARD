@@ -36,7 +36,8 @@
 /* USER CODE END Private defines */
 
 void MX_GPIO_Init(void);
-
+void TMC2590_StandaloneInit(void);
+void At93c66b_GPIO_Init(void);
 /* USER CODE BEGIN Prototypes */
 
 /* USER CODE END Prototypes */

@@ -38,7 +38,7 @@ void MX_CAN_Init(void)
   hcan.Init.BS1 = CAN_BS1_5TQ;
   hcan.Init.BS2 = CAN_BS2_3TQ;
   hcan.Init.TTCM = DISABLE;
-  hcan.Init.ABOM = DISABLE;
+  hcan.Init.ABOM = DISABLE; 	//DISABLE; 
   hcan.Init.AWUM = DISABLE;
   hcan.Init.NART = ENABLE;
   hcan.Init.RFLM = DISABLE;

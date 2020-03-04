@@ -25,9 +25,11 @@
 /*****TMC2590******/
 #define TMC2590_SPI  hspi2
 
-#define StepMotor_TIM  htim2
+//#define StepMotor_TIM  htim2
+#define StepMotor_TIM  htim4
 /*****htimx_Encoder******/
-#define htimx_Encoder  htim3
+//#define htimx_Encoder  htim3
+#define htimx_Encoder  htim2
 
 /*****husart_debug******/
 #define husart_debug  huart1
@@ -49,11 +51,19 @@
 #define UARTI_DEBUG_DATA_FRAME_SECOND 0xFF
 #define UARTI_DEBUG_DATA_LEN 0xFF
 
+//用于串口调试
+#define UARTI_TEST_DATA_FRAME_START 0xEA
+#define UARTI_TEST_DATA_FRAME_SECOND 0xEB
+
 #define Start_Position_Read() HAL_GPIO_ReadPin (GPIOB, Position_END_Pin)
 #define End_Position_Read()   HAL_GPIO_ReadPin (GPIOB, Position_START_Pin)
 
 #define MOTOR_MAXPLUS 1000000
 #define MOTOR_MINPLUS -1000000
+
+#define TMC2590_STANDALONE 0				//2590使用独立模式
+#define TMC2590_TEST_WITH_OC	1			//PWM使用定时器输出比较
+#define EEPROM_SPI_USE_NORMAL_IO 1	//EEPROM使用普通IO口模拟
 
 extern uint8_t can_rbuff[MAIN_TO_DRIVER_DATA_LEN];
 extern uint8_t DRIVER_TO_MAIN_DATA[DRIVER_TO_MAIN_DATA_LEN]; // 驱动板到主控板的数据
@@ -124,7 +134,7 @@ void Check_Location (void);
 void CAN_Filter_Config_Scale16_IdList (void);
 void RxMes_Init (void);
 void CAN_SetMsg (void);
-void Send_Driver_To_Mian_Data (void);
+void Send_Driver_To_Main_Data (void);
 void Driver_Can_Init (void);
 void Motor_Location_Write (void);
 void Motor_Location_Read (void);
@@ -134,4 +144,7 @@ void Eep_Data_Update (void);
 void Limit_Switch_Scanning (void);
 void Check_Location (void);
 void CAN_SendData_Acquisition (void);
+void TestUseUart(void);
+void UartDebugSend(void);
+
 #endif
