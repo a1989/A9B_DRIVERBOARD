@@ -10,7 +10,7 @@ unRegSGCSCONF   g_unRegSgcsConfConfig;
 
 char arrErrorString[16];
 
-uint8_t motor_step_value = 32;//细分设置，默认16细分
+uint8_t motor_step_value = 16;//细分设置，默认16细分
 uint8_t TMC2590_error_status = 0;
 
 //通过返回码获得字符串
@@ -544,9 +544,10 @@ bool TMC2590_Init (void)
 				HAL_GPIO_WritePin(GPIOB, TMC2590_CFG1_Pin, GPIO_PIN_RESET);				
 		#else
 			HAL_StatusTypeDef iStatus = SPI_TMC2590_SendByte (0x901b4, &iRead);  
-			iStatus = SPI_TMC2590_SendByte (0xD0008, &iRead);  
+			iStatus = SPI_TMC2590_SendByte (0xD000F, &iRead);  
 			iStatus = SPI_TMC2590_SendByte (0xEF000, &iRead);
-			iStatus = SPI_TMC2590_SendByte (0x00003, &iRead);  
+			iStatus = SPI_TMC2590_SendByte (0x00003, &iRead);
+//			iStatus = SPI_TMC2590_SendByte (0x00004, &iRead);
 			iStatus = SPI_TMC2590_SendByte (0xA8202, &iRead);  
 		#endif
 		Delay_ms(5);

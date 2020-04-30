@@ -15,7 +15,7 @@ uint8_t can_Receive_Right_flag = 1;//数据正确标志
 uint8_t motor_stop_flag = 1;//电机停止标志位
 extern EncoderType GetEncoder;
 
-uint16_t driver_can_stdid = 0xa2; //定义驱动板ID
+uint16_t driver_can_stdid = 0xa2; //0xa2; //定义驱动板ID
 uint16_t mian_can_stid = 0xa0; // 定义主控板ID
 
 CanTxMsgTypeDef TxMessage ;
@@ -47,7 +47,7 @@ uint8_t percircle_distance = 0;//丝杆模式下转动每圈所运动距离
 uint8_t motor_move_direction_flag = 0;//运动正方向标志位
 uint8_t encoder_cnt_direction_flag = 0;//编码器计数方向
 uint8_t motor_limit_flag = 0;
-uint8_t motor_maxspeed = 80; //120;
+uint8_t motor_maxspeed = 120;
 
 uint32_t ADC_Get_Info[3];
 float ADC_Current_Value;
@@ -645,15 +645,6 @@ void CAN_SetMsg (void)
 	{
 		TxMessage.Data[ubCounter] = DRIVER_TO_MAIN_DATA[ubCounter];
 	}
-	
-	TxMessage.Data[0] = 1;
-	TxMessage.Data[0] = 2;
-	TxMessage.Data[0] = 3;
-	TxMessage.Data[0] = 4;
-	TxMessage.Data[0] = 5;
-	TxMessage.Data[0] = 6;
-	TxMessage.Data[0] = 7;
-	TxMessage.Data[0] = 8;
 }
 
 //CAN筛选器配置

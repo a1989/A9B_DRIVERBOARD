@@ -142,11 +142,11 @@ int main(void)
 //	Driver_Board_Parameter_Init();
 	while (1)
 	{		
-		if(i > 300000)//if(g_bEnUartDebugSend)
+		if(i > 100000)//if(g_bEnUartDebugSend)
 		{	
 //			TMC2590_Init();
 //			TMC2590_GetStatus(&structRead);
-//				printf("\r\n %d", Location_Cnt);
+				printf("\r\n %d", Toggle_Pulse);
 //			UartDebugSend();
 			i = 0;
 			g_bEnUartDebugSend = false;

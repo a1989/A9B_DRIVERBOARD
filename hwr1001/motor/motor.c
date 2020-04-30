@@ -114,6 +114,12 @@ void DevelopmentFramwork (void)
 		Encoder_Total();
 		MotorSpeedLocatin_Set (Vel_Target, Dis_Target);
 	}
+	else
+	{
+			HAL_TIM_OC_Stop_IT (&htim4, TIM_CHANNEL_1);
+			MOTOR_OFF;
+			motor_stop_flag = 1;
+	}
 	iwdg_motor_ctrl_flag = 1;
 }
 
@@ -165,7 +171,7 @@ void MotorSpeedLocatin_Set (float speed, float lacation)
         //当到达目标位置的时候,这时候已经电机非常慢了.为了减少超调,可以直接将速度环的输出清零
         if (Vel_Exp_Val <= 0.1)
         {
-            Vel_Exp_Val = 0;
+//            Vel_Exp_Val = 0;
            	Vel_Exp_Val_tmp = 5;
 			//Vel_Exp_Val_tmp = 1;
         }
@@ -173,6 +179,12 @@ void MotorSpeedLocatin_Set (float speed, float lacation)
 				{
 						Vel_Exp_Val = (float)motor_maxspeed;
         }
+				
+				if(Vel_Exp_Val / (MSF + 1) > 10)
+        {
+            Vel_Exp_Val = 1;
+        }
+				
         /* 经过PID计算得到的结果是编码器的输出期望值的增量,
         需要转换为步进电机的控制量(频率值),这里乘上一个系数6400/2400
         */
@@ -246,6 +258,10 @@ void STEPMOTOR_Motion_Ctrl (uint8_t Dir, float Frequency)
          STEPMOTOR_OUTPUT_ENABLE();
         // STEPMOTOR_TORQUE_Disable();
         Toggle_Pulse = Step_Delay >> 1;//算出来的结果是周期
+				if(Toggle_Pulse < 30)
+				{
+					Toggle_Pulse = 30;
+				}
 
 	//	printf ("\r\n Toggle_Pulse:%d", Toggle_Pulse);	//test
     }

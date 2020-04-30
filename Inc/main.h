@@ -111,9 +111,11 @@ void Error_Handler(void);
 #define SIGNAL_LED_R_GPIO_Port GPIOB
 #define SIGNAL_LED_B_Pin GPIO_PIN_7
 #define SIGNAL_LED_B_GPIO_Port GPIOB
-#define Position_START_Pin GPIO_PIN_8
+//#define Position_START_Pin GPIO_PIN_8
+#define Position_START_Pin GPIO_PIN_9
 #define Position_START_GPIO_Port GPIOB
-#define Position_END_Pin GPIO_PIN_9
+//#define Position_END_Pin GPIO_PIN_9
+#define Position_END_Pin GPIO_PIN_8
 #define Position_END_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 #define SPI1_CS_Pin GPIO_PIN_4
